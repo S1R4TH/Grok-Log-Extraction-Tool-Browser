@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Extract Grok export conversations locally into HTML, JSON, and TXT logs.">
+  <meta name="description" content="Extract a Grok export ZIP locally into HTML, JSON, and TXT logs.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Grok Log Extraction Tool</title>
   <link rel="stylesheet" href="styles.css">
@@ -15,20 +15,20 @@
       <p>Extract and export conversation logs into HTML, JSON, and TXT.</p>
     </header>
 
-    <section class="control-group" aria-labelledby="folder-heading">
+    <section class="control-group" aria-labelledby="zip-heading">
       <div class="section-heading">
         <div>
-          <h2 id="folder-heading">Grok export folder</h2>
-          <p>Select the folder containing <code>prod-grok-backend.json</code>.</p>
+          <h2 id="zip-heading">Grok export ZIP</h2>
+          <p>Select the ZIP downloaded from xAI. You do not need to unzip it first.</p>
         </div>
         <span class="local-badge">Local processing only</span>
       </div>
-      <button id="folder-button" class="secondary-button" type="button">Select export folder</button>
-      <p id="folder-name" class="selection-value" aria-live="polite">No folder selected</p>
-      <div id="asset-fallback" class="asset-fallback" hidden>
-        <p><strong>Asset folder not found.</strong> Attachments can be exported as placeholders, or you can select the asset folder manually.</p>
-        <button id="asset-button" class="text-button" type="button">Select asset folder</button>
-      </div>
+      <label class="secondary-button file-picker" for="zip-input">
+        Select Grok export ZIP
+        <input id="zip-input" type="file" accept=".zip,application/zip,application/x-zip-compressed">
+      </label>
+      <p id="zip-name" class="selection-value" aria-live="polite">No ZIP selected</p>
+      <p id="asset-status" class="asset-status" aria-live="polite" hidden></p>
     </section>
 
     <section class="control-group" aria-labelledby="settings-heading">
@@ -42,7 +42,7 @@
 
       <label for="conversation-select">Available Conversations</label>
       <select id="conversation-select" disabled>
-        <option>Load a Grok export first</option>
+        <option>Load a Grok export ZIP first</option>
       </select>
 
       <fieldset class="format-options">
@@ -73,7 +73,8 @@
       </div>
       <progress id="progress" max="100" value="0">0%</progress>
       <button id="run-button" class="primary-button" type="button" disabled>START EXTRACTION</button>
-      <p class="output-note">Output is written to <code>extracted_logs</code> inside the selected export folder.</p>
+      <button id="save-button" class="secondary-button save-button" type="button" hidden disabled>Save output ZIP</button>
+      <p class="output-note">The result is saved as <code>extracted_grok_logs_YYYYMMDD.zip</code> with a matching root folder inside.</p>
     </section>
 
     <noscript>This tool requires JavaScript.</noscript>

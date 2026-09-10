@@ -9,6 +9,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   min-height: 100vh;
   margin: 0;
@@ -19,7 +23,8 @@ body {
 }
 
 button,
-select {
+select,
+input {
   font: inherit;
 }
 
@@ -176,11 +181,17 @@ button:disabled {
 }
 
 .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
   margin-top: 18px;
   padding: 0 16px;
   border: 1px solid #555;
+  border-radius: 7px;
   background: #303030;
   color: #fff;
+  cursor: pointer;
 }
 
 .secondary-button:hover:not(:disabled) {
@@ -195,27 +206,34 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
-.asset-fallback {
-  margin-top: 16px;
-  padding: 13px 14px;
-  border-left: 3px solid #777;
+.file-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.file-picker:focus-within {
+  outline: 2px solid #aaa;
+  outline-offset: 3px;
+}
+
+.file-picker:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.asset-status {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid #666;
   background: #272727;
-  color: #bbb;
+  color: #aaa;
   font-size: 0.84rem;
   line-height: 1.5;
-}
-
-.asset-fallback p {
-  margin-bottom: 8px;
-}
-
-.text-button {
-  min-height: auto;
-  padding: 0;
-  background: transparent;
-  color: #fff;
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 .run-panel {
@@ -272,6 +290,11 @@ progress::-moz-progress-bar {
 
 .primary-button:hover:not(:disabled) {
   background: #505050;
+}
+
+.save-button {
+  width: 100%;
+  margin-top: 12px;
 }
 
 .output-note {
