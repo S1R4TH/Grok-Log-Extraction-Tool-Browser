@@ -155,7 +155,7 @@ After extracting the output ZIP, open the conversation's `html/index.html`. Sele
 
 ## iOS Notes
 
-Extraction has been confirmed to work in Chrome on iOS.
+Extraction has been confirmed to work on iOS.
 
 However, there are some limitations when viewing the exported HTML on iPhone or iPad:
 
