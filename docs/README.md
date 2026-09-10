@@ -1,6 +1,6 @@
 # Grok Log Extraction Tool (Browser Edition)
 
-Extract conversations from an xAI Grok export ZIP and convert them into readable HTML, JSON, and TXT files.
+Extract conversations from an SpaceXAI Grok export ZIP and convert them into readable HTML, JSON, and TXT files.
 
 The ZIP does not need to be unzipped. All parsing, attachment extraction, and output generation run locally in your browser.
 
@@ -15,7 +15,7 @@ The ZIP does not need to be unzipped. All parsing, attachment extraction, and ou
 5. Click **START EXTRACTION**.
 6. When processing finishes, click **Save extracted_grok_logs_YYYYMMDD.zip**.
 
-Do not unzip the xAI export before selecting it.
+Do not unzip the SpaceXAI export before selecting it.
 
 ---
 
@@ -38,7 +38,7 @@ Browser support does not guarantee that every device can process every export si
 
 # Select the Grok Export ZIP
 
-Select the original ZIP downloaded from xAI.
+Select the original ZIP downloaded from SpaceXAI.
 
 The tool recursively searches the ZIP and automatically locates:
 
@@ -152,6 +152,17 @@ HTML output includes:
 - Missing-attachment placeholders
 
 After extracting the output ZIP, open the conversation's `html/index.html`. Select **Full Log** for the complete conversation or select a month.
+
+## iOS Notes
+
+Extraction has been confirmed to work in Chrome on iOS.
+
+However, there are some limitations when viewing the exported HTML on iPhone or iPad:
+
+- Local media included in the exported HTML may not be viewable through the iOS Files app's Quick Look preview.
+- Links to Grok-generated or edited images may not open properly on iOS.
+
+If you encounter these issues, viewing the extracted HTML on a desktop browser is recommended.
 
 ---
 
