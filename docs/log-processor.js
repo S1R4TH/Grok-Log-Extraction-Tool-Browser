@@ -254,6 +254,20 @@ a, a:visited {
         max-width: min(360px, calc(100vw - 24px));
     }
 }
+.image-renders {
+    width: min(600px, 100%);
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    color: #444;
+    font-size: 0.88em;
+}
+.image-render-link {
+    text-decoration: underline;
+    text-decoration-color: rgba(0, 0, 0, 0.25);
+}
 `;
 
 export function sanitizeFilename(value, fallback = "Untitled") {
@@ -442,6 +456,235 @@ export function conversationHasAttachments(conversation) {
   return responses.some((item) => responseAttachmentIds(responsePayload(item)).length > 0);
 }
 
+const IMAGE_RENDER_TYPES = new Map([
+  ["render_generated_image", "generated_image"],
+  ["render_edited_image", "edited_image"],
+]);
+
+function parseRenderAttribute(attributes, name) {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`(?:^|\\s)${escapedName}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i").exec(attributes);
+  return match ? match[1] ?? match[2] ?? match[3] ?? "" : "";
+}
+
+function parseImageRenderBlocks(message) {
+  const blocks = [];
+  const pattern = /<grok:render\b([^>]*?)(?:\/>|>[\s\S]*?<\/grok:render\s*>)/gi;
+  for (const match of message.matchAll(pattern)) {
+    const renderType = parseRenderAttribute(match[1], "type").toLowerCase();
+    const kind = IMAGE_RENDER_TYPES.get(renderType);
+    if (!kind) continue;
+    blocks.push({
+      start: match.index,
+      end: match.index + match[0].length,
+      raw: match[0],
+      kind,
+      card_id: parseRenderAttribute(match[1], "card_id") || null,
+    });
+  }
+  return blocks;
+}
+
+function parseJsonValue(value) {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function normalizedRenderKind(value) {
+  const lowered = String(value || "").toLowerCase();
+  return IMAGE_RENDER_TYPES.get(lowered)
+    || (lowered === "generated_image" ? "generated_image" : lowered === "edited_image" ? "edited_image" : null);
+}
+
+function normalizeImageUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const original = value.trim();
+  try {
+    const parsed = new URL(original);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.href : null;
+  } catch {
+    const relative = original.replace(/^\/+/, "");
+    return relative.startsWith("users/") ? `https://assets.grok.com/${relative}` : null;
+  }
+}
+
+function numericValue(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function findSourceImageId(value, seen = new Set()) {
+  if (!value || typeof value !== "object" || seen.has(value)) return null;
+  seen.add(value);
+  const keys = [
+    "source_image_id", "sourceImageId", "source_image_uuid", "sourceImageUuid",
+    "original_image_id", "originalImageId", "root_image_id", "rootImageId",
+  ];
+  for (const key of keys) {
+    const candidate = value[key];
+    if (candidate !== null && candidate !== undefined && candidate !== "") return String(candidate);
+  }
+  for (const child of Object.values(value)) {
+    if (child && typeof child === "object") {
+      const found = findSourceImageId(child, seen);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function sourceImageIdFromEditUri(response) {
+  if (typeof response?.image_edit_uri !== "string") return null;
+  const parts = response.image_edit_uri.replaceAll("\\", "/").replace(/\/+$/, "").split("/");
+  return parts.at(-1) === "content" && parts.length >= 2 ? parts.at(-2) || null : null;
+}
+
+function betterImageChunk(candidate, existing) {
+  const candidateComplete = candidate.progress === 100;
+  const existingComplete = existing.progress === 100;
+  if (candidateComplete !== existingComplete) return candidateComplete;
+  const candidateProgress = candidate.progress ?? -Infinity;
+  const existingProgress = existing.progress ?? -Infinity;
+  if (candidateProgress !== existingProgress) return candidateProgress > existingProgress;
+  return (candidate.seq ?? -Infinity) > (existing.seq ?? -Infinity);
+}
+
+function cleanRemovedRenderWhitespace(value) {
+  return value.replace(/[ \t]+(?=\r?\n)/g, "").trim();
+}
+
+function txtImageMarker(render) {
+  const label = render.kind === "edited_image" ? "Edited Image" : "Generated Image";
+  return `[${label}]${render.url ? `\n${render.url}` : ""}`;
+}
+
+export function normalizeImageRenders(response, message) {
+  const originalMessage = typeof message === "string" ? message : message == null ? "" : String(message);
+  const blocks = parseImageRenderBlocks(originalMessage);
+  const blockKindByCardId = new Map(blocks.filter((block) => block.card_id).map((block) => [block.card_id, block.kind]));
+  let cardValues = response?.card_attachments_json || [];
+  if (!Array.isArray(cardValues)) cardValues = [cardValues];
+  const candidates = [];
+
+  cardValues.forEach((rawCard, cardIndex) => {
+    const card = parseJsonValue(rawCard);
+    if (!card || typeof card !== "object" || Array.isArray(card)) return;
+    let chunk = parseJsonValue(card.image_chunk);
+    if (!chunk || typeof chunk !== "object" || Array.isArray(chunk)) return;
+    const imageUuidValue = chunk.imageUuid ?? chunk.image_uuid;
+    if (imageUuidValue === null || imageUuidValue === undefined || imageUuidValue === "") return;
+    const cardId = card.id === null || card.id === undefined || card.id === "" ? null : String(card.id);
+    const inferredKind = normalizedRenderKind(card.type)
+      || normalizedRenderKind(card.cardType)
+      || (cardId ? blockKindByCardId.get(cardId) : null)
+      || null;
+    if (!inferredKind) return;
+    candidates.push({
+      kind: inferredKind,
+      image_uuid: String(imageUuidValue),
+      url: normalizeImageUrl(chunk.imageUrl ?? chunk.image_url),
+      progress: numericValue(chunk.progress),
+      seq: numericValue(chunk.seq),
+      prompt: typeof chunk.imagePrompt === "string" ? chunk.imagePrompt : typeof chunk.image_prompt === "string" ? chunk.image_prompt : null,
+      resolution: chunk.resolution ?? card.resolution ?? null,
+      source_image_id: findSourceImageId(chunk) || findSourceImageId(card) || null,
+      card_id: cardId,
+      card_index: cardIndex,
+    });
+  });
+
+  const deduplicated = new Map();
+  for (const candidate of candidates) {
+    const existing = deduplicated.get(candidate.image_uuid);
+    if (!existing || betterImageChunk(candidate, existing)) deduplicated.set(candidate.image_uuid, candidate);
+  }
+  const remaining = [...deduplicated.values()];
+  const ordered = [];
+  for (const block of blocks) {
+    let index = block.card_id ? remaining.findIndex((candidate) => candidate.card_id === block.card_id) : -1;
+    if (index < 0) index = remaining.findIndex((candidate) => candidate.kind === block.kind);
+    if (index < 0 && remaining.length === 1) index = 0;
+    if (index >= 0) {
+      const candidate = remaining.splice(index, 1)[0];
+      candidate.kind = block.kind;
+      candidate.block = block;
+      ordered.push(candidate);
+    } else {
+      ordered.push({
+        kind: block.kind,
+        image_uuid: null,
+        url: null,
+        progress: null,
+        seq: null,
+        prompt: null,
+        resolution: null,
+        source_image_id: null,
+        card_id: block.card_id,
+        card_index: Number.MAX_SAFE_INTEGER,
+        block,
+      });
+    }
+  }
+  remaining.sort((left, right) => (left.seq ?? Number.MAX_SAFE_INTEGER) - (right.seq ?? Number.MAX_SAFE_INTEGER) || left.card_index - right.card_index);
+  for (const candidate of remaining) {
+    candidate.kind ||= "generated_image";
+    candidate.block = null;
+    ordered.push(candidate);
+  }
+
+  const fallbackSourceImageId = findSourceImageId(response) || sourceImageIdFromEditUri(response);
+  for (const render of ordered) {
+    if (render.kind === "edited_image" && !render.source_image_id) render.source_image_id = fallbackSourceImageId;
+  }
+
+  let cleanMessage = "";
+  let txtMessage = "";
+  let cursor = 0;
+  const emitted = new Set();
+  for (const block of blocks) {
+    const before = originalMessage.slice(cursor, block.start);
+    cleanMessage += before;
+    txtMessage += before;
+    const render = ordered.find((item) => item.block === block);
+    const identity = render?.image_uuid || `${block.kind}:${block.card_id || block.start}`;
+    if (render && !emitted.has(identity)) {
+      txtMessage += `\n${txtImageMarker(render)}\n`;
+      emitted.add(identity);
+    }
+    cursor = block.end;
+  }
+  cleanMessage += originalMessage.slice(cursor);
+  txtMessage += originalMessage.slice(cursor);
+  for (const render of ordered.filter((item) => !item.block)) {
+    const identity = render.image_uuid || `${render.kind}:${render.card_id || render.card_index}`;
+    if (!emitted.has(identity)) {
+      txtMessage += `\n${txtImageMarker(render)}\n`;
+      emitted.add(identity);
+    }
+  }
+
+  const imageRenders = ordered.map((render) => ({
+    kind: render.kind,
+    image_uuid: render.image_uuid,
+    url: render.url,
+    progress: render.progress,
+    seq: render.seq,
+    prompt: render.prompt,
+    resolution: render.resolution,
+    source_image_id: render.kind === "edited_image" ? render.source_image_id : null,
+  }));
+  return {
+    message: cleanRemovedRenderWhitespace(cleanMessage),
+    txt_message: cleanRemovedRenderWhitespace(txtMessage),
+    image_renders: imageRenders,
+  };
+}
+
 function bytesStartWith(data, signature) {
   if (data.length < signature.length) return false;
   return signature.every((value, index) => data[index] === value);
@@ -616,6 +859,9 @@ export async function normalizeResponseNodes(
     const sender = String(response.sender || response.role || "").trim().toLowerCase();
     const messageValue = response.message;
     const message = typeof messageValue === "string" ? messageValue : messageValue == null ? "" : String(messageValue);
+    const normalizedImageContent = sender === "assistant"
+      ? normalizeImageRenders(response, message)
+      : { message: message.trim(), txt_message: message.trim(), image_renders: [] };
     const date = parseResponseDateTime(response);
     const mediaTypesValue = response.media_types;
     const mediaTypes = Array.isArray(mediaTypesValue)
@@ -623,7 +869,7 @@ export async function normalizeResponseNodes(
       : mediaTypesValue ? [String(mediaTypesValue).toLowerCase()] : [];
     const rawParentId = response.parent_response_id;
     const parentId = rawParentId === null || rawParentId === undefined || rawParentId === "" ? null : String(rawParentId);
-    const attachments = await resolveAttachments(response);
+    const attachments = await resolveAttachments(response, normalizedImageContent.image_renders);
 
     const node = {
       key: nodeKey,
@@ -633,12 +879,14 @@ export async function normalizeResponseNodes(
       children: [],
       source_index: sourceIndex,
       sender,
-      message: message.trim(),
+      message: normalizedImageContent.message,
+      txt_message: normalizedImageContent.txt_message,
+      image_renders: normalizedImageContent.image_renders,
       dt_obj: date,
       time: formatDateTime(date, formatKey),
       iso_time: isoDateTime(date),
       media_types: mediaTypes,
-      transcript_unavailable: sender === "assistant" && !message.trim() && mediaTypes.includes("audio"),
+      transcript_unavailable: sender === "assistant" && !normalizedImageContent.message && mediaTypes.includes("audio"),
       attachments,
       sources: sender === "assistant" ? normalizeResponseSources(response) : [],
       raw_response: response,
@@ -749,7 +997,24 @@ export function compatibleJsonRecords(records) {
     const item = {};
     for (const sender of ["human", "assistant"]) {
       const node = record[sender];
-      if (node) item[sender] = { message: node.message, time: node.iso_time };
+      if (node) {
+        item[sender] = { message: node.message, time: node.iso_time };
+        if (node.image_renders?.length) {
+          item[sender].image_renders = node.image_renders.map((render) => {
+            const imageRender = {
+              kind: render.kind,
+              image_uuid: render.image_uuid,
+              url: render.url,
+              prompt: render.prompt,
+              resolution: render.resolution,
+            };
+            if (render.progress !== null && render.progress !== undefined) imageRender.progress = render.progress;
+            if (render.seq !== null && render.seq !== undefined) imageRender.seq = render.seq;
+            if (render.kind === "edited_image" && render.source_image_id) imageRender.source_image_id = render.source_image_id;
+            return imageRender;
+          });
+        }
+      }
     }
     return item;
   });
@@ -760,7 +1025,7 @@ export function writeTxtRecords(records) {
   for (const record of records) {
     for (const sender of ["human", "assistant"]) {
       const node = record[sender];
-      if (node) output += `"${node.message}"\n(${node.time})\n\n`;
+      if (node) output += `"${node.txt_message ?? node.message}"\n(${node.time})\n\n`;
     }
   }
   return output;
@@ -829,16 +1094,29 @@ export function renderGeneratedAssetsHtml(attachments) {
   return `<details class="generated-assets"><summary>Generated assets (${generated.length})</summary><ul>${items.join("")}</ul></details>`;
 }
 
+export function renderImageRendersHtml(imageRenders) {
+  if (!imageRenders?.length) return "";
+  const items = imageRenders.map((render) => {
+    const label = render.kind === "edited_image" ? "Edited Image" : "Generated Image";
+    if (!render.url) return `<span class="image-render-label">${label}</span>`;
+    return `<a class="image-render-link" href="${escapeHtml(render.url, true)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  });
+  return `<div class="image-renders">${items.join("")}</div>`;
+}
+
 export function renderMessageNodeHtml(sender, node) {
   const roleClass = sender === "human" ? "user" : "assistant";
   const bubbleHtml = `<div class="bubble">${escapeHtml(node.message || "")}</div>`;
   const mediaHtml = renderAttachmentsHtml(node.attachments || []);
-  const generatedHtml = renderGeneratedAssetsHtml(node.attachments || []);
+  const imageRendersHtml = sender === "assistant" ? renderImageRendersHtml(node.image_renders || []) : "";
+  const imageRenderIds = new Set((node.image_renders || []).map((render) => render.image_uuid).filter(Boolean));
+  const generatedHtml = renderGeneratedAssetsHtml((node.attachments || []).filter((attachment) => !imageRenderIds.has(attachment.asset_id)));
   const sourcesHtml = sender === "assistant" ? renderSourcesHtml(node.sources || []) : "";
   return `
 <div class="message ${roleClass}" data-sender="${escapeHtml(sender, true)}">
 ${bubbleHtml}
 ${mediaHtml}
+${imageRendersHtml}
 ${generatedHtml}
 ${sourcesHtml}
 <div class="timestamp">${escapeHtml(node.time)}</div>

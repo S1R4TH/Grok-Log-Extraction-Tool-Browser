@@ -269,15 +269,17 @@ If an attachment ID exists but its local `content` file is not included in the e
 
 The asset ID remains visible for investigation.
 
-## Generated Images
+## Grok-Generated and Edited Images
 
-Grok-generated images are displayed only when their corresponding local asset exists in the export.
+Grok-generated and edited image cards are handled separately from files that you attached to a message.
 
-The tool does not download files from `generated_image_urls`. If the generated image is not included locally, the HTML page displays:
+- HTML displays a **Generated Image** or **Edited Image** link when the card contains a usable image URL.
+- The link opens the image on `assets.grok.com` in a new tab.
+- External images are not automatically downloaded or embedded with an `<img>` element.
+- Long internal paths, user IDs, and image UUIDs are not displayed as visible link text.
+- If a corresponding local asset happens to exist in the export, the normal local attachment handling can still make it available.
 
-```text
-[Generated image not included in Grok export]
-```
+Legacy generated-image references without a usable card URL continue to use the existing local-asset or missing-asset behavior.
 
 Attachments are resolved and copied only when HTML output is selected. JSON-only and TXT-only extraction does not copy asset files.
 
@@ -293,9 +295,11 @@ Each message contains:
 - `message`
 - `time`
 
+Assistant messages that contain Grok-generated or edited image cards also include a structured `image_renders` array. It can contain the image kind, UUID, external URL, prompt, resolution, progress, sequence, and an edited image's source image ID when available. Raw `<grok:render>` markup is removed from `message`.
+
 Full-conversation and monthly JSON files are created.
 
-Sources, attachment metadata, backend tool traces, and raw response metadata are not expanded into simplified JSON output.
+Sources, normal attachment metadata, backend tool traces, and raw response metadata are not expanded into simplified JSON output.
 
 ---
 
@@ -304,6 +308,15 @@ Sources, attachment metadata, backend tool traces, and raw response metadata are
 TXT output contains each message followed by its timestamp.
 
 An empty line is inserted between individual messages. Full-conversation and monthly TXT files are created.
+
+Generated and edited image cards are represented as a short marker followed by the URL when available:
+
+```text
+[Generated Image]
+https://assets.grok.com/...
+```
+
+Raw `<grok:render>` markup and image prompts are not written to TXT.
 
 Sources, attachment metadata, and backend tool traces are not expanded into TXT output.
 

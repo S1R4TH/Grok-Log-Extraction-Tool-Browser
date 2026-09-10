@@ -69,16 +69,17 @@ function createAttachmentResolver(assetRoot, htmlDirectory, relativeAssetDirecto
     return assetOutputDirectoryPromise;
   };
 
-  return async (response) => {
+  return async (response, imageRenders = []) => {
     const attachments = [];
     const generatedUrls = generatedUrlsOf(response);
     const generated = String(response?.query_type || "").toLowerCase() === "imagine" || generatedUrls.length > 0;
+    const imageRenderIds = new Set(imageRenders.map((render) => render.image_uuid).filter(Boolean));
 
     for (const assetId of responseAttachmentIds(response)) {
       const originalPath = generatedUrls.find((value) => typeof value === "string" && value.includes(assetId)) || null;
       const attachment = {
         asset_id: assetId,
-        generated,
+        generated: generated || imageRenderIds.has(assetId),
         original_path: originalPath,
         exists: false,
         mime: null,
