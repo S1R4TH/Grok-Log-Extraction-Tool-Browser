@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Extract Grok export conversations locally into HTML, JSON, and TXT logs.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Grok Log Extraction Tool</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <h1>Grok Log Extraction Tool</h1>
+      <p>Extract and export conversation logs into HTML, JSON, and TXT.</p>
+    </header>
+
+    <section class="control-group" aria-labelledby="folder-heading">
+      <div class="section-heading">
+        <div>
+          <h2 id="folder-heading">Grok export folder</h2>
+          <p>Select the folder containing <code>prod-grok-backend.json</code>.</p>
+        </div>
+        <span class="local-badge">Local processing only</span>
+      </div>
+      <button id="folder-button" class="secondary-button" type="button">Select export folder</button>
+      <p id="folder-name" class="selection-value" aria-live="polite">No folder selected</p>
+      <div id="asset-fallback" class="asset-fallback" hidden>
+        <p><strong>Asset folder not found.</strong> Attachments can be exported as placeholders, or you can select the asset folder manually.</p>
+        <button id="asset-button" class="text-button" type="button">Select asset folder</button>
+      </div>
+    </section>
+
+    <section class="control-group" aria-labelledby="settings-heading">
+      <h2 id="settings-heading">Extraction settings</h2>
+      <label for="format-select">Select Date/Time Format</label>
+      <select id="format-select">
+        <option value="iso">YYYY-MM-DD (ISO / Standard)</option>
+        <option value="us">MM/DD/YYYY (US Format)</option>
+        <option value="eu">DD/MM/YYYY (EU Format)</option>
+      </select>
+
+      <label for="conversation-select">Available Conversations</label>
+      <select id="conversation-select" disabled>
+        <option>Load a Grok export first</option>
+      </select>
+
+      <fieldset class="format-options">
+        <legend>Output Formats</legend>
+        <label class="check-option">
+          <input id="output-html" type="checkbox" value="html" checked>
+          <span>HTML</span>
+        </label>
+        <label class="check-option">
+          <input id="output-json" type="checkbox" value="json">
+          <span>JSON</span>
+        </label>
+        <label class="check-option">
+          <input id="output-txt" type="checkbox" value="txt">
+          <span>TXT</span>
+        </label>
+      </fieldset>
+      <p id="format-error" class="format-error" hidden>Select at least one output format.</p>
+    </section>
+
+    <section class="run-panel" aria-labelledby="status-heading">
+      <div class="status-row">
+        <div>
+          <h2 id="status-heading">Status</h2>
+          <p id="status-text" aria-live="polite">Ready</p>
+        </div>
+        <output id="progress-label" for="progress">0%</output>
+      </div>
+      <progress id="progress" max="100" value="0">0%</progress>
+      <button id="run-button" class="primary-button" type="button" disabled>START EXTRACTION</button>
+      <p class="output-note">Output is written to <code>extracted_logs</code> inside the selected export folder.</p>
+    </section>
+
+    <noscript>This tool requires JavaScript.</noscript>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
