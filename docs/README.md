@@ -1,8 +1,32 @@
 # Grok Log Extraction Tool (Browser Edition)
 
-Extract conversations from your exported Grok data and convert them into easy-to-read HTML, JSON, and TXT files.
+Convert conversations from a Grok data export into readable HTML, JSON, and TXT files.
 
-No installation or executable download is required. The tool runs as a static website hosted on GitHub Pages and processes the selected Grok export folder locally in your browser.
+The tool runs entirely in Chrome or Edge. No application installation is required, and your Grok data is not uploaded to a server.
+
+---
+
+# What This Tool Exports
+
+You can select any combination of these output formats:
+
+- **HTML** — selected by default
+- **JSON**
+- **TXT**
+
+For example, you can export:
+
+- HTML only
+- JSON only
+- TXT only
+- HTML and JSON
+- HTML and TXT
+- JSON and TXT
+- HTML, JSON, and TXT
+
+Only the selected format folders are created or updated.
+
+HTML output includes the visual conversation layout, monthly pages, a monthly index, Sources, and locally available attachments. JSON and TXT remain conversation-focused and do not include expanded Sources, tool traces, or attachment metadata.
 
 ---
 
@@ -13,39 +37,35 @@ Use a current desktop version of:
 - Google Chrome
 - Microsoft Edge
 
-The tool uses the File System Access API to read the selected Grok export and create output files inside it. This release supports Chrome and Edge; other browsers are not supported.
+Open the tool from its GitHub Pages HTTPS address.
 
-Open the tool through its GitHub Pages HTTPS address. Opening `index.html` directly from your computer may prevent browser modules or folder access from working correctly.
+The browser will ask for permission to read and write the selected folder. Write permission is required because the tool creates an `extracted_logs` folder inside your Grok export folder.
+
+This release supports Chrome and Edge. Other browsers are not supported.
 
 ---
 
-# Preparation
+# 1. Download Your Grok Data
 
-## 1. Open the Browser Tool
-
-Open the published **Grok Log Extraction Tool** GitHub Pages site in Chrome or Edge.
-
-No application installation is required.
-
-## 2. Download Your Grok Data
-
-Download and unzip your data from:
+Download your Grok data from:
 
 https://accounts.x.ai/data
 
-After extracting the archive, locate the folder containing:
+Unzip the downloaded archive before using the tool.
+
+Inside the extracted archive, locate the folder that directly contains:
 
 ```text
 prod-grok-backend.json
 ```
 
-The same folder will normally also contain:
+The same folder will normally contain:
 
 ```text
 prod-mc-asset-server/
 ```
 
-The folder path will look similar to:
+A typical path looks like this:
 
 ```text
 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/
@@ -63,204 +83,319 @@ The UUID-like folder names are automatically generated and will be different for
 
 ---
 
-# How to Use
+# 2. Select the Correct Folder
 
-1. Open the GitHub Pages site in Chrome or Edge.
-
+1. Open the Grok Log Extraction Tool website in Chrome or Edge.
 2. Click **Select export folder**.
+3. Select the UUID-like folder that directly contains `prod-grok-backend.json`.
+4. Allow read and write access when the browser asks for permission.
 
-3. Select the folder that directly contains `prod-grok-backend.json`.
-
-4. Allow the browser to read and write files in the selected folder.
-
-5. Select your preferred date/time format.
-
-6. Select one or more output formats.
-
-   - **HTML** is selected by default.
-   - **HTML**, **JSON**, and **TXT** can be enabled independently or together.
-   - At least one output format must be selected.
-
-7. Select the conversation to export.
-
-   - **ALL Conversations** exports every conversation.
-   - Selecting an individual conversation exports only that conversation.
-
-8. Click **START EXTRACTION**.
-
-9. Wait until the status shows that extraction has completed.
-
-If `prod-mc-asset-server` is beside `prod-grok-backend.json`, it is detected automatically. If it cannot be found and the selected conversation contains attachment references, the tool allows you to select the asset folder manually.
-
----
-
-# Progress
-
-Large conversation histories may require several minutes to process.
-
-During extraction:
-
-- The progress bar may temporarily stop moving while a large conversation is being processed.
-- Reading and parsing a large `prod-grok-backend.json` file may briefly make the page appear unresponsive.
-- Copying large images, videos, PDFs, or other attachments can increase processing time.
-- This is normal. Please wait until the completion status appears.
-
-Do not close the tab or revoke folder access while extraction is in progress.
-
----
-
-# Output
-
-The tool creates an `extracted_logs` folder beside `prod-grok-backend.json`. A folder is then created for each exported conversation.
-
-Only the selected output-format folders are created. The example below shows the structure when HTML, JSON, and TXT are all selected.
+Select this folder:
 
 ```text
 export_data/
-├── prod-grok-backend.json
-├── prod-mc-asset-server/
-└── extracted_logs/
-    ├── Conversation_A/
-    │   ├── html/
-    │   │   ├── Conversation_A.html          # Full conversation
-    │   │   ├── YYYY-MM.html                 # Monthly conversation
-    │   │   ├── index.html                   # Monthly index
-    │   │   └── Conversation_A_assets/       # Resolved attachments
-    │   ├── json/
-    │   │   ├── Conversation_A.json
-    │   │   └── YYYY-MM.json
-    │   └── txt/
-    │       ├── Conversation_A.txt
-    │       └── YYYY-MM.txt
-    └── Conversation_B/
-        ├── html/
-        ├── json/
-        └── txt/
+└── xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/  ← Select this folder
+    ├── prod-grok-backend.json
+    └── prod-mc-asset-server/
 ```
 
-Open the following file to browse a conversation by month:
+Do not initially select:
+
+- The `export_data` parent folder
+- The `ttl` folder
+- The `30d` folder
+- The `prod-mc-asset-server` folder itself
+- The `prod-grok-backend.json` file by itself
+
+The selected folder must directly contain `prod-grok-backend.json`.
+
+## Asset Folder Detection
+
+When `prod-mc-asset-server` is beside `prod-grok-backend.json`, it is detected automatically.
+
+If it cannot be detected and the Grok log contains attachment references, the page displays **Asset folder not found**. In that case, click **Select asset folder** and select either:
+
+- The `prod-mc-asset-server` folder, or
+- A folder that directly contains `prod-mc-asset-server`
+
+Extraction can continue without the asset folder, but missing attachments will be shown as placeholders in HTML output.
+
+---
+
+# 3. Choose the Extraction Settings
+
+## Date and Time Format
+
+Select one of the following:
+
+- `YYYY-MM-DD (ISO / Standard)`
+- `MM/DD/YYYY (US Format)`
+- `DD/MM/YYYY (EU Format)`
+
+## Conversation
+
+Select the conversation to export:
+
+- **ALL Conversations** exports every conversation.
+- Selecting one title exports only conversations with that title.
+
+## Output Formats
+
+Select at least one output format:
+
+- **HTML** creates readable chat pages and copies available attachments.
+- **JSON** creates simplified conversation JSON files.
+- **TXT** creates plain-text conversation files.
+
+HTML is selected by default. Enable JSON or TXT when you also need those formats, or disable HTML when you want JSON/TXT only.
+
+---
+
+# 4. Start Extraction
+
+1. Click **START EXTRACTION**.
+2. Keep the browser tab open.
+3. Wait until the status reports that extraction has completed.
+
+Large exports can require several minutes.
+
+During processing:
+
+- Reading a large `prod-grok-backend.json` file may briefly make the page appear unresponsive.
+- The progress bar may pause while a large conversation is processed.
+- Copying images, videos, PDFs, and other attachments can take additional time.
+
+Do not close the page or revoke folder permission while extraction is running.
+
+---
+
+# Output Folder
+
+The tool creates `extracted_logs` in the same folder as `prod-grok-backend.json`.
+
+When HTML, JSON, and TXT are all selected, the result looks like this:
+
+```text
+export_data/
+└── xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/
+    ├── prod-grok-backend.json
+    ├── prod-mc-asset-server/
+    └── extracted_logs/
+        ├── Conversation_A/
+        │   ├── html/
+        │   │   ├── Conversation_A.html
+        │   │   ├── YYYY-MM.html
+        │   │   ├── index.html
+        │   │   └── Conversation_A_assets/
+        │   ├── json/
+        │   │   ├── Conversation_A.json
+        │   │   └── YYYY-MM.json
+        │   └── txt/
+        │       ├── Conversation_A.txt
+        │       └── YYYY-MM.txt
+        └── Conversation_B/
+            ├── html/
+            ├── json/
+            └── txt/
+```
+
+If only JSON and TXT are selected, only those folders are created or updated:
+
+```text
+extracted_logs/
+└── Conversation_A/
+    ├── json/
+    └── txt/
+```
+
+If output from an older extraction already exists, unselected old folders are not automatically deleted. Selected output files with the same names are overwritten.
+
+---
+
+# HTML Output
+
+HTML output contains:
+
+- A full conversation page
+- Monthly conversation pages
+- A monthly index
+- Human messages aligned to the right
+- Assistant messages aligned to the left
+- Chronological date separators and timestamps
+- Collapsible Sources for supported assistant responses
+- Images and other locally available attachments
+- Missing-attachment and missing-generated-image placeholders
+
+Open this file first:
 
 ```text
 extracted_logs/Conversation_A/html/index.html
 ```
 
-This index is generated only when HTML output is selected.
-
-Files with the same output name are overwritten when extraction runs again. Unrelated files and obsolete files from older runs are not automatically deleted.
+Select **Full Log** to open the complete conversation, or select a month from the index.
 
 ---
 
-# Exported Content
+# Attachments and Media
 
-## Conversations and Branches
+When HTML output is selected, the tool reads attachment IDs from each response and looks for the corresponding local file in `prod-mc-asset-server`.
 
-- Human and assistant responses are normalized as individual response nodes.
-- Sender names are handled case-insensitively.
-- Responses are displayed in chronological order using `create_time`.
+Resolved files are copied into:
+
+```text
+extracted_logs/Conversation_A/html/Conversation_A_assets/
+```
+
+The asset ID is preserved in the copied filename. The extension is detected from the file contents because Grok asset files are normally stored without an extension.
+
+Media and files you sent to Grok can then be accessed from the related message in the HTML conversation.
+
+Depending on the file type:
+
+- Images are displayed directly in the conversation.
+- Video files are displayed with video controls.
+- Audio files are displayed with audio controls.
+- PDFs are displayed as file links.
+- Text and source-code files can include a short preview and a file link.
+- Unknown file types are preserved as generic file links.
+
+Supported detection includes PNG, JPEG, WebP, GIF, BMP, TIFF, SVG, PDF, MP4, MOV, WebM, MKV, AVI, WAV, MP3, OGG, FLAC, M4A, HTML, XML, JSON, Markdown, Python, JavaScript, ZIP, 7z, RAR, text, and unknown binary files.
+
+If an attachment ID exists but its local `content` file is not included in the export, the HTML page displays:
+
+```text
+[Attachment not included in Grok export]
+```
+
+The asset ID remains visible for investigation.
+
+## Generated Images
+
+Grok-generated images are displayed only when their corresponding local asset exists in the export.
+
+The tool does not download files from `generated_image_urls`. If the generated image is not included locally, the HTML page displays:
+
+```text
+[Generated image not included in Grok export]
+```
+
+Attachments are resolved and copied only when HTML output is selected. JSON-only and TXT-only extraction does not copy asset files.
+
+---
+
+# JSON Output
+
+JSON output keeps the established simplified conversation structure.
+
+Each message contains:
+
+- `sender` through its `human` or `assistant` record key
+- `message`
+- `time`
+
+Full-conversation and monthly JSON files are created.
+
+Sources, attachment metadata, backend tool traces, and raw response metadata are not expanded into simplified JSON output.
+
+---
+
+# TXT Output
+
+TXT output contains each message followed by its timestamp.
+
+An empty line is inserted between individual messages. Full-conversation and monthly TXT files are created.
+
+Sources, attachment metadata, and backend tool traces are not expanded into TXT output.
+
+---
+
+# Conversation Ordering and Branches
+
+- Each Grok response is processed as an individual node.
+- Human and assistant sender names are handled case-insensitively.
+- Responses are exported in ascending `create_time` order.
 - The original response index is used when timestamps are identical.
 - Parent, child, branch, and leaf relationships are retained during processing.
-- A human and assistant response are combined into a compatible pair only when they are adjacent chronologically and have a valid parent-child relationship.
-- Unpaired human or assistant responses are preserved instead of being discarded.
+- Human and assistant responses are paired only when they are adjacent chronologically and have a valid parent-child relationship.
+- Unpaired human and assistant responses are preserved.
+- Empty audio assistant responses are preserved as empty speech bubbles; unavailable transcripts are not fabricated.
 
-## Attachments
+---
 
-Attachment IDs are resolved from each response, including:
+# Sources
 
-- `file_attachments`
-- `image_edit_uri`
-- Generated-image metadata when available
-
-The tool checks `prod-mc-asset-server/<asset-id>/content` and the known underscore-prefixed layout. File types are detected from their contents rather than their filename.
-
-Supported previews and links include:
-
-- Images such as PNG, JPEG, WebP, GIF, BMP, TIFF, and SVG
-- Video such as MP4, MOV, WebM, MKV, and AVI
-- Audio such as WAV, MP3, OGG, FLAC, and M4A
-- PDF files
-- HTML, XML, JSON, plain text, Markdown, Python, and JavaScript files
-- ZIP, 7z, RAR, and unknown binary files as file links
-
-If an attachment is referenced but not included in the Grok export, the HTML log displays a placeholder and keeps its asset ID.
-
-Generated images are not downloaded from `generated_image_urls`. They are displayed only when a corresponding local asset exists.
-
-Attachments are copied and rendered only when HTML output is selected. Simplified JSON and TXT output remain conversation-focused and do not include attachment metadata.
-
-## Sources
-
-Assistant responses can include a collapsed **Sources** section in HTML output.
+Supported assistant responses can display a collapsed **Sources** section in HTML.
 
 Sources are collected in this priority order:
 
-1. `cited_web_search_results`
+1. Cited web results
 2. External pages opened through `OpenPage`
-3. `web_search_results` and supported external search references
+3. Web search results and supported external search references
 
-Duplicate URLs are removed where possible. Search queries, thinking traces, internal tool details, and raw backend metadata are not displayed.
+Duplicate URLs are removed where possible.
 
-Sources and backend metadata are not expanded into TXT or simplified JSON output.
+The HTML output does not expose search queries, thinking traces, Bash, ReadFile, EditFile, local MCP operations, or raw backend metadata.
+
+Sources are not expanded into JSON or TXT output.
 
 ---
 
 # Date, Time, and Time Zone
 
-Date and time are displayed using the selected format.
+Unix timestamps and timezone-aware timestamps are converted using the local time zone configured on the computer running the browser.
 
-Unix timestamps and timezone-aware timestamps are converted using the local time zone configured on the computer running the browser. The date/time format option changes only the display format; it does not select a time zone.
+The date/time format setting changes only how dates are displayed. It does not select a different time zone.
 
-Timezone-free timestamp strings are used as provided by the export.
-
----
-
-# Notes and Limitations
-
-- Conversation titles are automatically sanitized and used as folder names.
-- Empty assistant audio responses are preserved as empty speech bubbles; unavailable transcripts are not fabricated.
-- Sender or tool nodes that are not identified as human or assistant are retained internally but are not rendered as chat messages.
-- Thinking traces and internal tools such as Bash, ReadFile, EditFile, and local MCP operations are not included in HTML Sources.
-- Missing generated images, audio transcripts, or assets cannot be reconstructed when their contents are absent from the Grok export.
-- Very large exports require substantial browser memory and may take time to parse.
+Timezone-free timestamp strings are interpreted as local date and time values.
 
 ---
 
 # Privacy
 
-All processing is performed locally in your browser.
+All Grok export processing is performed locally in your browser.
 
 The tool does not:
 
-- Upload conversation logs or attachments
+- Upload conversations or attachments
 - Send analytics or telemetry
-- Contact external APIs
-- Request files referenced by `generated_image_urls`
-- Send prompts, search contents, or metadata over the Internet
+- Contact external APIs during extraction
+- Download generated images from external paths
+- Send prompts, Sources, search contents, or metadata over the Internet
 
-The GitHub Pages host serves only the application files. After the page loads, the extraction workflow reads and writes only the folder you explicitly select.
+GitHub Pages serves the application files only. The selected Grok export remains on your computer.
 
 ---
 
-# Folder Access and Troubleshooting
+# Troubleshooting
 
-The browser displays a permission prompt because the tool needs to create `extracted_logs` in the selected folder.
+## `prod-grok-backend.json` Was Not Found
 
-If extraction cannot start:
+Select the folder that directly contains `prod-grok-backend.json`. Do not select one of its parent folders.
 
-1. Confirm that you are using a current desktop version of Chrome or Edge.
-2. Confirm that the site is opened over HTTPS.
-3. Select the folder that directly contains `prod-grok-backend.json`, not one of its parent folders.
-4. Allow both read and write access when prompted.
-5. Confirm that the selected folder is not read-only.
+## The Browser Cannot Write `extracted_logs`
 
-If attachments appear as missing, confirm that `prod-mc-asset-server` is beside `prod-grok-backend.json`, or select it manually when prompted.
+- Use a current desktop version of Chrome or Edge.
+- Open the tool from its GitHub Pages HTTPS address.
+- Allow read and write access when prompted.
+- Confirm that the selected folder is not read-only.
+
+## Attachments Are Missing
+
+- Confirm that `prod-mc-asset-server` is beside `prod-grok-backend.json`.
+- If the page displays **Asset folder not found**, select the asset folder manually.
+- Some referenced assets, especially generated images, may not be included in the Grok export.
+
+## Extraction Appears to Stop
+
+Large conversations and media files can take time to process. Keep the page open and wait for the completion status.
 
 ---
 
 # Deploying to GitHub Pages
 
-The browser edition is a dependency-free static site. No build command or package installation is required.
+This browser edition is a dependency-free static site. No build command or package installation is required.
 
-1. Place the contents of this `docs` directory in the repository's `docs/` folder.
+1. Place the browser files in the repository's `docs/` folder.
 2. Commit and push the files to the target branch.
 3. Open the repository's **Settings** page on GitHub.
 4. Select **Pages**.
